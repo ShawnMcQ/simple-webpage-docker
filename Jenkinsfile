@@ -1,0 +1,41 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = 'shawnmcq/simple-webpage'
+    }
+
+    stages {
+        stage('Clone') {
+            steps {
+                git 'https://github.com/ShawnMcQ/simple-webpage-docker.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    docker.build("${IMAGE_NAME}")
+                }
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                    script {
+                        docker.withRegistry('', 'dockerhub-creds') {
+                            docker.image("${IMAGE_NAME}").push()
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Run Container') {
+            steps {
+                sh "docker run -d -p 80:80 ${IMAGE_NAME}"
+            }
+        }
+    }
+}
